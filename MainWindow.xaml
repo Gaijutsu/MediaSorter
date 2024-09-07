@@ -1,0 +1,21 @@
+﻿<Window x:Class="MediaSorter.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="File Sorter" Height="500" Width="800">
+    <Grid>
+        <StackPanel Orientation="Vertical" Margin="10">
+            <Button Name="btnSelectSource" Content="Select Source Folder" Click="btnSelectSource_Click" Margin="0,5"/>
+            <Button Name="btnSelectDestination" Content="Select Destination Folder" Click="btnSelectDestination_Click" Margin="0,5"/>
+            <CheckBox Name="chkCopyFiles" Content="Copy files instead of moving" Margin="0,5"/>
+            <DataGrid Name="dataGridFiles" AutoGenerateColumns="False" CanUserAddRows="False" Margin="0,5">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="File Name" Binding="{Binding FileName}" Width="*"/>
+                    <DataGridTextColumn Header="Target Folder" Binding="{Binding TargetFolder}" Width="*"/>
+                    <DataGridCheckBoxColumn Header="Process" Binding="{Binding Process}" Width="Auto"/>
+                </DataGrid.Columns>
+            </DataGrid>
+            <ProgressBar Name="progressBar" Height="20" Margin="0,5" Visibility="Collapsed"/>
+            <Button Name="btnProcessFiles" Content="Process Files" Click="btnProcessFiles_Click" Margin="0,5" IsEnabled="False"/>
+        </StackPanel>
+    </Grid>
+</Window>
