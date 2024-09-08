@@ -8,22 +8,62 @@ using System.Windows;
 using System.Windows.Forms; // Ensure correct reference
 using Microsoft.Win32;
 using MessageBox = System.Windows.MessageBox; // To avoid conflict
+using System.Runtime.InteropServices;
+using System.Text;
 
-namespace MediaSorter
+namespace FileSorter
 {
     public partial class MainWindow : Window
     {
         private string sourceFolder = string.Empty;
         private string destinationFolder = string.Empty;
+        private string iniFilePath;
         public ObservableCollection<FileItem> Files { get; set; }
-
+        
         public MainWindow()
         {
             InitializeComponent();
+            iniFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "FileSorter.ini");
             Files = new ObservableCollection<FileItem>();
             dataGridFiles.ItemsSource = Files;
             btnProcessFiles.IsEnabled = false; // Disable the button initially
+            LoadSettings();
         }
+        
+        private void LoadSettings()
+        {
+            if (File.Exists(iniFilePath))
+            {
+                sourceFolder = ReadIniFile("Folders", "SourceFolder", string.Empty);
+                destinationFolder = ReadIniFile("Folders", "DestinationFolder", string.Empty);
+                LoadFiles();
+                CheckIfReadyToProcess();
+            }
+        }
+        
+        private void SaveSettings()
+        {
+            WriteIniFile("Folders", "SourceFolder", sourceFolder);
+            WriteIniFile("Folders", "DestinationFolder", destinationFolder);
+        }
+        
+        private string ReadIniFile(string section, string key, string defaultValue)
+        {
+            StringBuilder temp = new StringBuilder(255);
+            int i = GetPrivateProfileString(section, key, defaultValue, temp, 255, iniFilePath);
+            return temp.ToString();
+        }
+        
+        private void WriteIniFile(string section, string key, string value)
+        {
+            WritePrivateProfileString(section, key, value, iniFilePath);
+        }
+        
+        [DllImport("kernel32")]
+        private static extern long WritePrivateProfileString(string section, string key, string val, string filePath);
+        
+        [DllImport("kernel32")]
+        private static extern int GetPrivateProfileString(string section, string key, string def, StringBuilder retVal, int size, string filePath);
 
         private void btnSelectSource_Click(object sender, RoutedEventArgs e)
         {
@@ -36,6 +76,7 @@ namespace MediaSorter
                     CheckIfReadyToProcess();
                 }
             }
+            SaveSettings();
         }
 
         private void btnSelectDestination_Click(object sender, RoutedEventArgs e)
@@ -49,6 +90,7 @@ namespace MediaSorter
                     CheckIfReadyToProcess();
                 }
             }
+            SaveSettings();
         }
 
         private void LoadFiles()
@@ -105,7 +147,7 @@ namespace MediaSorter
             var filesToProcess = Files.Where(f => f.Process).ToList();
             int totalFiles = filesToProcess.Count;
 
-            Dispatcher.Invoke(() =>
+            this.Dispatcher.Invoke(() =>
             {
                 progressBar.Visibility = Visibility.Visible;
                 progressBar.Minimum = 0;
@@ -130,7 +172,13 @@ namespace MediaSorter
 
                         string destinationFilePath = Path.Combine(targetFolder, fileItem.FileName);
 
-                        if (chkCopyFiles.IsChecked == true)
+                        bool isCopyFilesChecked = false;
+                        this.Dispatcher.Invoke(() =>
+                        {
+                            isCopyFilesChecked = chkCopyFiles.IsChecked == true;
+                        });
+                        
+                        if (isCopyFilesChecked)
                         {
                             File.Copy(sourceFilePath, destinationFilePath, true);
                         }
@@ -140,16 +188,16 @@ namespace MediaSorter
                         }
 
                         // Update progress on the UI thread
-                        Dispatcher.Invoke(() => progressBar.Value = i + 1);
+                        this.Dispatcher.Invoke(() => progressBar.Value = i + 1);
                     }
                     catch (Exception ex)
                     {
-                        Dispatcher.Invoke(() => MessageBox.Show($"Error processing file {fileItem.FileName}: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error));
+                        this.Dispatcher.Invoke(() => MessageBox.Show($"Error processing file {fileItem.FileName}: {ex.Message}\n\nStack Trace:\n{ex.StackTrace}", "Error", MessageBoxButton.OK, MessageBoxImage.Error));
                     }
                 }
             });
 
-            Dispatcher.Invoke(() =>
+            this.Dispatcher.Invoke(() =>
             {
                 progressBar.Visibility = Visibility.Collapsed;
                 MessageBox.Show("Files processed successfully!");
